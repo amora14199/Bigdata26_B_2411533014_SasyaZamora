@@ -1,0 +1,2 @@
+# Bigdata26_B_2411533014_SasyaZamora
+Praktikum BigData
