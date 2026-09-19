@@ -1,0 +1,319 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyMBzu5Ebf/3oevOomkP3fwp",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/amora14199/Bigdata26_B_2411533014_SasyaZamora/blob/main/Praktikum2\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "2FcOMGYVEhrl"
+      },
+      "outputs": [],
+      "source": [
+        "!pip install faker -q"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "K-1. Import Library dan Inisialisasi\n",
+        "Mengimpor seluruh library yang dipakai di praktikum ini."
+      ],
+      "metadata": {
+        "id": "LtknT9mkdXW4"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "from faker import Faker\n",
+        "import random\n"
+      ],
+      "metadata": {
+        "id": "e4U0XbDTL00r"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "K-2. Membuat Dataset Sintetis (Simulasi Data Acquisition)\n",
+        "Membuat dataset transaksi sintetis dengan SEED tetap, sekaligus menyisipkan missing value dan data duplikat untuk mensimulasikan data mentah."
+      ],
+      "metadata": {
+        "id": "PRuFvrwKdbNe"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "SEED = 42\n",
+        "np.random.seed(SEED)\n",
+        "random.seed(SEED)\n",
+        "fake = Faker(\"id_ID\")\n",
+        "Faker.seed(SEED)\n",
+        "\n",
+        "N = 500\n",
+        "kategori_produk = [\"Elektronik\", \"Fashion\", \"Kesehatan\", \"Rumah Tangga\", \"Olahraga\", \"Buku\"]\n",
+        "metode_bayar = [\"Transfer Bank\", \"E-Wallet\", \"COD\", \"Kartu Kredit\"]\n",
+        "\n",
+        "rows = []\n",
+        "for i in range(1, N + 1):\n",
+        "    trx_id = f\"TRX{i:05d}\"\n",
+        "    nama_pelanggan = fake.name()\n",
+        "    produk = fake.word().capitalize() + \" \" + random.choice([\"Pro\", \"Lite\", \"Max\", \"Basic\", \"\"])\n",
+        "    kategori = random.choice(kategori_produk)\n",
+        "    harga_dasar = random.choice([15000, 25000, 50000, 75000, 120000, 250000, 500000, 1200000])\n",
+        "    qty = random.randint(1, 5)\n",
+        "\n",
+        "    harga_variants = [\n",
+        "        str(harga_dasar),\n",
+        "        f\"Rp{harga_dasar:,}\".replace(\",\", \".\"),\n",
+        "        f\"{harga_dasar}.0\",\n",
+        "        f\" {harga_dasar} \",\n",
+        "    ]\n",
+        "    harga = random.choice(harga_variants)\n",
+        "\n",
+        "    tgl = fake.date_between(start_date=\"-90d\", end_date=\"today\")\n",
+        "    tgl_variants = [tgl.strftime(\"%Y-%m-%d\"), tgl.strftime(\"%d/%m/%Y\"), tgl.strftime(\"%d-%m-%Y\")]\n",
+        "    tanggal = random.choice(tgl_variants)\n",
+        "\n",
+        "    metode = random.choice(metode_bayar)\n",
+        "    if random.random() < 0.3:\n",
+        "        metode = metode.lower()\n",
+        "    if random.random() < 0.2:\n",
+        "        kategori = kategori.upper() + \"  \"\n",
+        "\n",
+        "    kota = fake.city()\n",
+        "    rating = random.choice([1, 2, 3, 4, 5, None, None])\n",
+        "\n",
+        "    rows.append({\n",
+        "        \"transaction_id\": trx_id, \"customer_name\": nama_pelanggan, \"product_name\": produk.strip(),\n",
+        "        \"category\": kategori, \"price\": harga, \"quantity\": qty, \"payment_method\": metode,\n",
+        "        \"transaction_date\": tanggal, \"shipping_city\": kota, \"rating\": rating,\n",
+        "    })\n",
+        "\n",
+        "df = pd.DataFrame(rows)\n",
+        "\n",
+        "for col, frac in [(\"customer_name\", 0.02), (\"shipping_city\", 0.03), (\"payment_method\", 0.015)]:\n",
+        "    idx = df.sample(frac=frac, random_state=SEED).index\n",
+        "    df.loc[idx, col] = np.nan\n",
+        "\n",
+        "dup_rows = df.sample(n=15, random_state=SEED)\n",
+        "df = pd.concat([df, dup_rows], ignore_index=True)\n",
+        "df = df.sample(frac=1, random_state=SEED).reset_index(drop=True)\n",
+        "\n",
+        "df.to_csv(\"transaksi_mentah.csv\", index=False)\n",
+        "print(\"Jumlah baris:\", len(df))"
+      ],
+      "metadata": {
+        "id": "Ar5fjXTgL8Bu"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "K-3. Deteksi dan Penanganan Missing Value\n",
+        "Mendeteksi jumlah data kosong per kolom, lalu menghapus baris yang kehilangan data wajib dan mengisi kota kosong dengan \"Tidak Diketahui\"."
+      ],
+      "metadata": {
+        "id": "tzZvwCXodffp"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(df.isnull().sum())\n",
+        "\n",
+        "df = df.dropna(subset=[\"customer_name\", \"payment_method\"])\n",
+        "df[\"shipping_city\"] = df[\"shipping_city\"].fillna(\"Tidak Diketahui\")\n",
+        "print(\"Jumlah baris setelah drop_duplicates():\", len(df))"
+      ],
+      "metadata": {
+        "id": "s4DDPpfAMNId"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "K-4. Deteksi dan Penanganan Duplicate\n",
+        "Mendeteksi dan menghapus baris transaksi yang tercatat dua kali (duplicate)."
+      ],
+      "metadata": {
+        "id": "xchfyUSAdiqg"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(\"Baris duplicate (semua kolom sama):\", df.duplicated().sum())\n",
+        "print(\"transaction_id duplicate:\", df['transaction_id'].duplicated().sum())\n",
+        "\n",
+        "df = df.drop_duplicates()\n",
+        "print(\"Jumlah baris setelah drop_duplicates():\", len(df))\n"
+      ],
+      "metadata": {
+        "id": "O2zygPyVMWCP"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "K-5. Koreksi Tipe Data dan Standardisasi Format\n",
+        "Merapikan format teks, mengubah harga jadi angka, menyamakan format tanggal, dan memastikan tipe data tiap kolom sudah benar."
+      ],
+      "metadata": {
+        "id": "b-EFuR_1dn3n"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# a. Standardisasi teks kategorikal\n",
+        "for col in [\"category\", \"payment_method\", \"shipping_city\"]:\n",
+        "    df[col] = df[col].astype(\"string\").str.strip().str.title()\n",
+        "\n",
+        "# \"Cod\" adalah singkatan; kembalikan ke huruf kapital penuh setelah Title Case\n",
+        "df[\"payment_method\"] = df[\"payment_method\"].replace({\"Cod\": \"COD\"})\n",
+        "\n",
+        "# b. Koreksi tipe data pada kolom price\n",
+        "def bersihkan_harga(x):\n",
+        "    if pd.isna(x):\n",
+        "        return np.nan\n",
+        "    x = str(x).strip().replace(\"Rp\", \"\").replace(\".\", \"\").replace(\",\", \".\")\n",
+        "    try:\n",
+        "        return float(x)\n",
+        "    except ValueError:\n",
+        "        return np.nan\n",
+        "\n",
+        "df[\"price\"] = df[\"price\"].apply(bersihkan_harga)\n",
+        "\n",
+        "# c. Standardisasi format tanggal ke YYYY-MM-DD\n",
+        "def parse_tanggal(x):\n",
+        "    for fmt in (\"%Y-%m-%d\", \"%d/%m/%Y\", \"%d-%m-%Y\"):\n",
+        "        try:\n",
+        "            return pd.to_datetime(x, format=fmt)\n",
+        "        except ValueError:\n",
+        "            continue\n",
+        "    return pd.NaT\n",
+        "\n",
+        "df[\"transaction_date\"] = df[\"transaction_date\"].apply(parse_tanggal).dt.strftime(\"%Y-%m-%d\")\n",
+        "\n",
+        "# d. Finalisasi tipe data\n",
+        "df[\"quantity\"] = df[\"quantity\"].astype(int)\n",
+        "df[\"price\"] = df[\"price\"].astype(float)"
+      ],
+      "metadata": {
+        "id": "wcbLRPJnWeXX"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "K-6. Ekspor Dataset Bersih\n",
+        "Menyimpan dataset yang sudah bersih ke file transaksi_bersih.csv."
+      ],
+      "metadata": {
+        "id": "A-HRXdgFdsu1"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df.to_csv(\"transaksi_bersih.csv\", index=False)\n",
+        "print(\"Dataset bersih tersimpan:\", len(df), \"baris\")"
+      ],
+      "metadata": {
+        "id": "Wz8DBnF7W3-6"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from google.colab import auth\n",
+        "auth.authenticate_user()\n",
+        "\n",
+        "import google.auth\n",
+        "from googleapiclient.discovery import build\n",
+        "from googleapiclient.http import MediaFileUpload\n",
+        "\n",
+        "creds, _ = google.auth.default()\n",
+        "drive_service = build('drive', 'v3', credentials=creds)\n",
+        "\n",
+        "FOLDER_ID = \"1bJZeBZ0D0oMmm44ZcyFSo8CJPCmHhDLV\"\n",
+        "\n",
+        "def upload_to_drive(file_path, folder_id):\n",
+        "    file_metadata = {'name': file_path.split('/')[-1], 'parents': [folder_id]}\n",
+        "    media = MediaFileUpload(file_path, resumable=True)\n",
+        "    uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()\n",
+        "    print(f\"{file_path} berhasil diupload, ID: {uploaded.get('id')}\")\n",
+        "\n",
+        "upload_to_drive(\"transaksi_mentah.csv\", FOLDER_ID)\n",
+        "upload_to_drive(\"transaksi_bersih.csv\", FOLDER_ID)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "hWdC3D5sdJ7I",
+        "outputId": "14c4f425-67d5-439e-dbca-56c67856233a"
+      },
+      "execution_count": 17,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": [
+            "WARNING:google_auth_httplib2:httplib2 transport does not support per-request timeout. Set the timeout when constructing the httplib2.Http instance.\n",
+            "WARNING:google_auth_httplib2:httplib2 transport does not support per-request timeout. Set the timeout when constructing the httplib2.Http instance.\n"
+          ]
+        },
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "transaksi_mentah.csv berhasil diupload, ID: 1GWc9Sw9UM7lFuE546UyiUUWGbWOKKKQp\n",
+            "transaksi_bersih.csv berhasil diupload, ID: 1201UYJp-eYj0wVWDn474hwXnyldUW8ra\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
